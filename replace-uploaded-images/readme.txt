@@ -3,7 +3,7 @@ Contributors: Mike Kelly, Serge Rauber
 Tags: image, resize, optimisation
 Requires at least: 2.0.2
 Tested up to: 3.2.1
-Stable tag: 0.1
+Stable tag: 0.3
 
 Replace uploaded images with Wordpress-generated 'Large size' versions, to save disk space and improve performance.
 
@@ -20,6 +20,9 @@ The size of 'Large size' images can be edited in Settings -> Media -> Image Size
 2. Activate the plugin through the 'Plugins' menu in WordPress
 
 == Changelog ==
+
+= 0.3 =
+* Fixed a bug where the wrong upload folder was chosen when trying to resize
 
 = 0.2 =
 * Add multisite compatibility.

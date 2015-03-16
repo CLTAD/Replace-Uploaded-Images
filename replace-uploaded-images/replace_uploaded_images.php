@@ -3,9 +3,9 @@
 Plugin Name: Replace Uploaded Images
 Plugin URI: http://mikekelly.myblog.arts.ac.uk/software
 Description: Replaces the uploaded image with the Wordpress-generated 'Large' image, as specified in Settings -> Media
-			 This was created in response to users uploading very large images directly from their digital cameras.
-			 Can be optionally disabled in Settings -> Media.
-Version: 0.2
+      This was created in response to users uploading very large images directly from their digital cameras.
+      Can be optionally disabled in Settings -> Media.
+Version: 0.3
 Author: Mike Kelly, Serge Rauber
 Author URI: http://mikekelly.myblog.arts.ac.uk
 
@@ -25,64 +25,73 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-function rui_replace_uploaded_image($image_data) {
-	
-	$rui_enabled = get_option( 'rui_enable_disable' );
-	// Disabled? Return original image data
-	if ( $rui_enabled === '0' ) {
-		return $image_data;
-	}
-	
-	// if there is no large image, return original image data
-	if (!isset($image_data['sizes']['large'])) {
-		return $image_data;
-	}
+function rui_replace_uploaded_image($image_data, $attachment_id) {
 
-	// paths to the uploaded image and the large image
-	$upload_dir = wp_upload_dir();
-	$uploaded_image_location = $upload_dir['basedir'] . '/' .$image_data['file'];
-	$large_image_location = $upload_dir['path'] . '/'.$image_data['sizes']['large']['file'];
+  $rui_enabled = get_option( 'rui_enable_disable' );
+  // Disabled? Return original image data
+  if ( $rui_enabled === '0' ) {
+    return $image_data;
+  }
 
-	// delete the uploaded image
-	unlink($uploaded_image_location);
+  // if there is no large image, return original image data
+  if (!isset($image_data['sizes']['large'])) {
+    return $image_data;
+  }
 
-	// rename the large image
-	rename($large_image_location,$uploaded_image_location);
+  $attachment = get_post( $attachment_id );
+  $time = current_time('mysql');
+  if ($post = get_post($attachment->post_parent)) {
+      if ( substr( $post->post_date, 0, 4 ) > 0 ) {
+          $time = $post->post_date;
+      }
+  }
+  $upload_dir = wp_upload_dir($time);
+  $uploaded_image_location = $upload_dir['basedir'] . '/' .$image_data['file'];
+  $large_image_location = $upload_dir['path'] . '/'.$image_data['sizes']['large']['file'];
 
-	// update image metadata and return them
-	$image_data['width'] = $image_data['sizes']['large']['width'];
-	$image_data['height'] = $image_data['sizes']['large']['height'];
-	unset($image_data['sizes']['large']);
+  if (file_exists($large_image_location)) {
+      // delete the uploaded image
+      unlink($uploaded_image_location);
 
-	return $image_data;
+      // rename the large image
+      rename($large_image_location,$uploaded_image_location);
+
+      // update image metadata and return them
+      $image_data['width'] = $image_data['sizes']['large']['width'];
+      $image_data['height'] = $image_data['sizes']['large']['height'];
+      unset($image_data['sizes']['large']);
+  }
+
+  return $image_data;
 }
-add_filter('wp_generate_attachment_metadata','rui_replace_uploaded_image');
+add_filter('wp_generate_attachment_metadata','rui_replace_uploaded_image', 10 , 2);
 
 function rui_section_title_and_description() {
-	?><p><?php _e('Set whether to keep the original uploaded image, or replace it with the Large size image, if defined above. This is enabled by default for better performance and to save disk space. Disable this option if, for example, you want to share images for print, and need the original high resolution versions.', 'rui_replace_uploaded_images') ?></p><?php
+  ?><p><?php _e('Set whether to keep the original uploaded image, or replace it with the Large size image, if defined above. This is enabled by default for better performance and to save disk space. Disable this option if, for example, you want to share images for print, and need the original high resolution versions.', 'rui_replace_uploaded_images') ?></p><?php
 }
 
 function rui_enable_disable() {
-	$rui_enabled =  get_option('rui_enable_disable');
-	if ( !$rui_enabled && $rui_enabled !== '0'){
-		// Enable RUI by default. The option value is only written if explicitly disabled.
-		// This means we don't have to write a default value to every single blog, we just check to see if the option has been set.
-		$rui_enabled = '1';
-	}
-	?><fieldset><legend class="hidden"><?php _e('Replace uploaded images', 'rui_replace_uploaded_images') ?></legend>
+  $rui_enabled =  get_option('rui_enable_disable');
+  if ( !$rui_enabled && $rui_enabled !== '0'){
+    // Enable RUI by default. The option value is only written if explicitly disabled.
+    // This means we don't have to write a default value to every single blog, we just check to see if the option has been set.
+    $rui_enabled = '1';
+  }
+  ?>
+<fieldset><legend class="hidden"><?php _e('Replace uploaded images', 'rui_replace_uploaded_images') ?></legend>
 <input id="rui_enable_disable" type="checkbox" value="1" name="rui_enable_disable" <?php checked('1', $rui_enabled); ?>/>
 <label for="rui_enable_disable"><?php _e('enabled', 'rui_replace_uploaded_images'); ?></label>
 </fieldset><?php
 }
 
 function rui_settings_activation() {
-	add_option('rui_enable_disable', '1');
+  add_option('rui_enable_disable', '1');
 }
 
 function rui_add_settings() {
-	register_setting('media', 'rui_enable_disable', 'intval');
-	add_settings_section('replaceuploadedimages', __('Replace Uploaded Images', 'rui_replace_uploaded_images'), 'rui_section_title_and_description', 'media');
-	add_settings_field('rui_enable_disable', __('Replace uploaded images', 'rui_replace_uploaded_images'), 'rui_enable_disable', 'media', 'replaceuploadedimages');
+  register_setting('media', 'rui_enable_disable', 'intval');
+  add_settings_section('replaceuploadedimages', __('Replace Uploaded Images', 'rui_replace_uploaded_images'), 'rui_section_title_and_description', 'media');
+  add_settings_field('rui_enable_disable', __('Replace uploaded images', 'rui_replace_uploaded_images'), 'rui_enable_disable', 'media', 'replaceuploadedimages');
 }
 
 add_action('admin_init', 'rui_add_settings');
